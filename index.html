@@ -138,6 +138,20 @@ select.fil:focus{border-color:var(--gold)}
 .tick-item.marcado.pag{background:#d4edda;border-color:#28a745;color:#155724}
 .tick-item.marcado.cont{background:#d0d7f0;border-color:var(--navy);color:var(--navy)}
 .tick-box{width:16px;height:16px;border-radius:4px;border:2px solid currentColor;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;line-height:1}
+
+/* LOGIN */
+.login-overlay{position:fixed;inset:0;background:linear-gradient(135deg,#6a1080 0%,#8e24aa 100%);display:flex;align-items:center;justify-content:center;z-index:9999}
+.login-box{background:#fff;border-radius:16px;padding:40px 36px;width:100%;max-width:380px;box-shadow:0 24px 64px rgba(0,0,0,.3);text-align:center}
+.login-logo{margin-bottom:16px}
+.login-logo img{height:70px;width:auto}
+.login-titulo{font-family:'Playfair Display',serif;font-size:20px;color:var(--navy);margin-bottom:4px}
+.login-sub{font-size:12px;color:var(--g400);margin-bottom:28px}
+.login-field{width:100%;padding:11px 14px;border-radius:8px;border:2px solid var(--g200);font-family:'Nunito',sans-serif;font-size:14px;outline:none;transition:border-color .2s;margin-bottom:12px;box-sizing:border-box}
+.login-field:focus{border-color:var(--navy)}
+.login-btn{width:100%;padding:12px;border-radius:8px;border:none;background:var(--navy);color:#fff;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:opacity .2s;margin-top:4px}
+.login-btn:hover{opacity:.88}
+.login-btn:disabled{opacity:.5;cursor:not-allowed}
+.login-erro{color:#c0392b;font-size:12px;margin-top:8px;min-height:18px}
 </style>
 </head>
 <body>
@@ -150,6 +164,7 @@ select.fil:focus{border-color:var(--gold)}
     <button class="btn btn-green" onclick="exportarCSV()">⬇️ Exportar CSV</button>
     <button class="btn btn-outline" onclick="exportarTodos()">🖨️ Exportar Todos</button>
     <button class="btn btn-gold" onclick="carregar()">🔄 Atualizar</button>
+    <button class="btn btn-outline" onclick="sair()" style="color:#fff;border-color:rgba(255,255,255,.3)">🚪 Sair</button>
   </div>
 </header>
 
@@ -910,15 +925,108 @@ function exportarTodos() {
   a.click();
 }
 
+
+var AUTH_URL = URL_SB + '/auth/v1';
+
+// Copia logo para o login
+window.addEventListener('load', function() {
+  var img = document.querySelector('.logo-img');
+  var loginImg = document.getElementById('login-logo-img');
+  if (img && loginImg) loginImg.src = img.src;
+});
+
+// Verifica sessão salva
+async function verificarSessao() {
+  var token = localStorage.getItem('sb_access_token');
+  var expiry = localStorage.getItem('sb_token_expiry');
+  if (!token || !expiry) return false;
+  if (Date.now() > parseInt(expiry)) {
+    // Tenta renovar com refresh token
+    var refresh = localStorage.getItem('sb_refresh_token');
+    if (!refresh) return false;
+    try {
+      var resp = await fetch(AUTH_URL + '/token?grant_type=refresh_token', {
+        method: 'POST',
+        headers: { 'apikey': KEY_SB, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refresh })
+      });
+      var data = await resp.json();
+      if (data.access_token) {
+        salvarSessao(data);
+        return true;
+      }
+    } catch(e) {}
+    return false;
+  }
+  return true;
+}
+
+function salvarSessao(data) {
+  localStorage.setItem('sb_access_token', data.access_token);
+  localStorage.setItem('sb_refresh_token', data.refresh_token);
+  localStorage.setItem('sb_token_expiry', Date.now() + (data.expires_in * 1000));
+}
+
+function limparSessao() {
+  localStorage.removeItem('sb_access_token');
+  localStorage.removeItem('sb_refresh_token');
+  localStorage.removeItem('sb_token_expiry');
+}
+
+async function fazerLogin() {
+  var email = document.getElementById('login-email').value.trim();
+  var senha = document.getElementById('login-senha').value;
+  var erro = document.getElementById('login-erro');
+  var btn = document.getElementById('login-btn');
+
+  if (!email || !senha) { erro.textContent = 'Preencha e-mail e senha.'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+  erro.textContent = '';
+
+  try {
+    var resp = await fetch(AUTH_URL + '/token?grant_type=password', {
+      method: 'POST',
+      headers: { 'apikey': KEY_SB, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, password: senha })
+    });
+    var data = await resp.json();
+    if (data.access_token) {
+      salvarSessao(data);
+      document.getElementById('login-overlay').style.display = 'none';
+      carregar();
+    } else {
+      erro.textContent = 'E-mail ou senha incorretos.';
+    }
+  } catch(e) {
+    erro.textContent = 'Erro de conexão.';
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Entrar';
+}
+
+// Enter no campo de senha
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && document.getElementById('login-overlay').style.display !== 'none') {
+    fazerLogin();
+  }
+});
+
+// Botão sair no header
+function sair() {
+  limparSessao();
+  location.reload();
+}
+
 // Inicia
-carregar().then(function() {
-  // Realtime: escuta mudanças na tabela rematriculas
+function iniciarRealtime() {
   var ws_url = URL_SB.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + KEY_SB + '&vsn=1.0.0';
   var socket = new WebSocket(ws_url);
   var heartbeat;
 
   socket.onopen = function() {
-    // Join channel
     socket.send(JSON.stringify({
       topic: 'realtime:public:rematriculas',
       event: 'phx_join',
@@ -935,12 +1043,10 @@ carregar().then(function() {
     if (msg.event === 'postgres_changes' && msg.payload && msg.payload.data) {
       var rec = msg.payload.data.record;
       if (!rec) return;
-      // Atualiza o registro local
       var idx = dados.findIndex(function(x){ return x.id === rec.id; });
       if (idx >= 0) {
         dados[idx].tick_pagamento = rec.tick_pagamento;
         dados[idx].tick_contrato = rec.tick_contrato;
-        // Atualiza os ticks visualmente sem re-renderizar tudo
         atualizarTicksCard(rec.id);
       }
     }
@@ -948,6 +1054,14 @@ carregar().then(function() {
 
   socket.onerror = function() { clearInterval(heartbeat); };
   socket.onclose = function() { clearInterval(heartbeat); };
+}
+
+verificarSessao().then(function(logado) {
+  if (logado) {
+    document.getElementById('login-overlay').style.display = 'none';
+    carregar();
+    iniciarRealtime();
+  }
 });
 
 function atualizarTicksCard(id) {
@@ -963,5 +1077,20 @@ function atualizarTicksCard(id) {
   });
 }
 </script>
+
+<!-- LOGIN OVERLAY -->
+<div class="login-overlay" id="login-overlay">
+  <div class="login-box">
+    <div class="login-logo">
+      <img src="" alt="Logo" id="login-logo-img">
+    </div>
+    <div class="login-titulo">Colégio Gênesis Life</div>
+    <div class="login-sub">PAINEL ADMINISTRATIVO</div>
+    <input type="email" class="login-field" id="login-email" placeholder="E-mail" autocomplete="email">
+    <input type="password" class="login-field" id="login-senha" placeholder="Senha" autocomplete="current-password">
+    <button class="login-btn" id="login-btn" onclick="fazerLogin()">Entrar</button>
+    <div class="login-erro" id="login-erro"></div>
+  </div>
+</div>
 </body>
 </html>
