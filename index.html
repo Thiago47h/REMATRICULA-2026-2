@@ -147,6 +147,7 @@ select.fil:focus{border-color:var(--gold)}
   <div class="hdr-title">Colégio Gênesis Life <small>Painel de Rematrículas 2026</small></div>
   <div class="hdr-right">
     <button class="btn btn-green" onclick="exportarCSV()">⬇️ Exportar CSV</button>
+    <button class="btn btn-outline" onclick="exportarTodos()">🖨️ Exportar Todos</button>
     <button class="btn btn-gold" onclick="carregar()">🔄 Atualizar</button>
   </div>
 </header>
@@ -166,9 +167,7 @@ select.fil:focus{border-color:var(--gold)}
     <div class="stat" id="st-f2" onclick="filtrarStat('f2')">
       <div class="n" id="n-f2">—</div><div class="l">Fund. II</div>
     </div>
-    <div class="stat" id="st-mat" onclick="filtrarStat('mat')">
-      <div class="n" id="n-mat">—</div><div class="l">Matutino</div>
-    </div>
+
   </div>
 
   
@@ -207,6 +206,13 @@ select.fil:focus{border-color:var(--gold)}
       <option value="">Todos os períodos</option>
       <option value="Matutino">Matutino</option>
       <option value="Vespertino">Vespertino</option>
+    </select>
+    <select class="fil" id="fil-tick" onchange="renderLista()">
+      <option value="">Pagamento e Contrato</option>
+      <option value="pag_ok">✅ Pagamento OK</option>
+      <option value="cont_ok">✅ Contrato OK</option>
+      <option value="tudo_ok">✅ Tudo OK</option>
+      <option value="tudo_pend">⏳ Tudo pendente</option>
     </select>
   </div>
 
@@ -279,12 +285,12 @@ function atualizarStats() {
   document.getElementById('n-inf').textContent = dados.filter(function(r){ return seg(r.curso) === 'inf'; }).length;
   document.getElementById('n-f1').textContent = dados.filter(function(r){ return seg(r.curso) === 'f1'; }).length;
   document.getElementById('n-f2').textContent = dados.filter(function(r){ return seg(r.curso) === 'f2'; }).length;
-  document.getElementById('n-mat').textContent = dados.filter(function(r){ return (r.periodo || '').indexOf('Matutino') >= 0; }).length;
+
 }
 
 function filtrarStat(val) {
   statAtivo = val;
-  ['todos','inf','f1','f2','mat'].forEach(function(id) {
+  ['todos','inf','f1','f2'].forEach(function(id) {
     document.getElementById('st-' + id).classList.remove('ativo');
   });
   document.getElementById('st-' + (val || 'todos')).classList.add('ativo');
@@ -294,6 +300,7 @@ function filtrarStat(val) {
 function renderLista() {
   var busca = document.getElementById('busca').value.toLowerCase();
   var fp = document.getElementById('fil-periodo').value;
+  var ft = document.getElementById('fil-tick').value;
 
   var filtrados = dados.filter(function(r) {
     var nome = (r.aluno_nome || '').toLowerCase();
@@ -301,8 +308,13 @@ function renderLista() {
     if (busca && nome.indexOf(busca) < 0 && resp.indexOf(busca) < 0) return false;
     if (turmaAtiva && r.curso !== turmaAtiva) return false;
     if (fp && (r.periodo || '').indexOf(fp) < 0) return false;
-    if (statAtivo && statAtivo !== 'mat' && seg(r.curso) !== statAtivo) return false;
-    if (statAtivo === 'mat' && (r.periodo || '').indexOf('Matutino') < 0) return false;
+    if (statAtivo && seg(r.curso) !== statAtivo) return false;
+    if (ft === 'pag_ok' && !r.tick_pagamento) return false;
+    if (ft === 'pag_pend' && r.tick_pagamento) return false;
+    if (ft === 'cont_ok' && !r.tick_contrato) return false;
+    if (ft === 'cont_pend' && r.tick_contrato) return false;
+    if (ft === 'tudo_ok' && (!r.tick_pagamento || !r.tick_contrato)) return false;
+    if (ft === 'tudo_pend' && (r.tick_pagamento || r.tick_contrato)) return false;
     return true;
   });
 
@@ -704,6 +716,197 @@ function atualizarTick(el, marcado) {
     el.classList.remove('marcado');
     el.querySelector('.tick-box').textContent = '';
   }
+}
+
+
+function gerarFichaHTML(r) {
+  function v(val) { return val || ''; }
+  function lin(label, val) {
+    return '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc"><strong>' + label + ':</strong> ' + v(val) + '</td></tr>';
+  }
+  function lin2(a, va, b, vb) {
+    return '<tr>' +
+      '<td style="padding:6px 8px;font-size:12px;border:1px solid #ccc;width:25%"><strong>' + a + ':</strong><br>' + v(va) + '</td>' +
+      '<td style="padding:6px 8px;font-size:12px;border:1px solid #ccc;width:25%"><strong>' + b + ':</strong><br>' + v(vb) + '</td>' +
+      '<td colspan="2" style="border:1px solid #ccc"></td></tr>';
+  }
+  function lin3(a, va, b, vb, c, vc) {
+    return '<tr>' +
+      '<td style="padding:6px 8px;font-size:12px;border:1px solid #ccc;width:25%"><strong>' + a + ':</strong><br>' + v(va) + '</td>' +
+      '<td style="padding:6px 8px;font-size:12px;border:1px solid #ccc;width:25%"><strong>' + b + ':</strong><br>' + v(vb) + '</td>' +
+      '<td style="padding:6px 8px;font-size:12px;border:1px solid #ccc;width:25%"><strong>' + c + ':</strong><br>' + v(vc) + '</td>' +
+      '<td style="border:1px solid #ccc"></td></tr>';
+  }
+  function lin4(a, va, b, vb, c, vc, d, vd) {
+    return '<tr>' +
+      '<td style="padding:6px 8px;font-size:12px;border:1px solid #ccc;width:20%"><strong>' + a + ':</strong><br>' + v(va) + '</td>' +
+      '<td style="padding:6px 8px;font-size:12px;border:1px solid #ccc;width:20%"><strong>' + b + ':</strong><br>' + v(vb) + '</td>' +
+      '<td style="padding:6px 8px;font-size:12px;border:1px solid #ccc;width:20%"><strong>' + c + ':</strong><br>' + v(vc) + '</td>' +
+      '<td style="padding:6px 8px;font-size:12px;border:1px solid #ccc;width:40%"><strong>' + d + ':</strong><br>' + v(vd) + '</td></tr>';
+  }
+  function secTitle(txt) {
+    return '<tr><td colspan="4" style="background:#7b1fa2;color:#fff;font-weight:bold;font-size:12px;padding:5px 8px;letter-spacing:.5px;text-transform:uppercase;border:1px solid #7b1fa2">' + txt + '</td></tr>';
+  }
+  function tbl(rows) {
+    return '<table style="width:100%;border-collapse:collapse;margin-bottom:10px">' + rows + '</table>';
+  }
+
+  var curso = v(r.curso).toUpperCase();
+  function ck(val) { return curso === val ? '(✓)' : '(  )'; }
+  var per = v(r.periodo).toUpperCase();
+  function ckP(val) { return per.indexOf(val) >= 0 ? '(✓)' : '(  )'; }
+
+  var logoSrc = document.querySelector('.logo-img') ? document.querySelector('.logo-img').src : '';
+  var dataEnvio = r.data_envio ? new Date(r.data_envio).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}) : '___/___/______';
+
+  var autRows = '';
+  if (r.autorizados && r.autorizados.length) {
+    autRows = '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc"><strong>Autorizados a retirar o aluno:</strong><br><br>';
+    autRows += '<table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr style="background:#f0e8f5"><th style="padding:3px 6px;border:1px solid #ddd;text-align:left">Nome</th><th style="padding:3px 6px;border:1px solid #ddd;text-align:left">Parentesco</th><th style="padding:3px 6px;border:1px solid #ddd;text-align:left">RG</th><th style="padding:3px 6px;border:1px solid #ddd;text-align:left">Telefone</th></tr></thead><tbody>';
+    r.autorizados.forEach(function(a) {
+      autRows += '<tr><td style="padding:3px 6px;border:1px solid #ddd">' + v(a.nome) + '</td><td style="padding:3px 6px;border:1px solid #ddd">' + v(a.parentesco) + '</td><td style="padding:3px 6px;border:1px solid #ddd">' + v(a.rg) + '</td><td style="padding:3px 6px;border:1px solid #ddd">' + v(a.tel) + '</td></tr>';
+    });
+    autRows += '</tbody></table></td></tr>';
+  }
+
+  var h = '<div style="font-family:Arial,sans-serif;font-size:12px;color:#111;line-height:1.5;page-break-after:always">';
+
+  h += '<table style="width:100%;border-collapse:collapse;margin-bottom:14px"><tr>' +
+    '<td style="width:80px;vertical-align:middle">' + (logoSrc ? '<img src="' + logoSrc + '" style="height:60px;width:auto">' : '') + '</td>' +
+    '<td style="vertical-align:middle;padding-left:10px">' +
+      '<div style="font-size:16px;font-weight:bold;color:#7b1fa2">COLÉGIO GÊNESIS LIFE</div>' +
+      '<div style="font-size:13px;font-weight:bold;text-decoration:underline">REMATRÍCULA</div>' +
+      '<div style="font-size:12px;font-weight:bold">REQUERIMENTO PARA O ANO DE 2026</div>' +
+    '</td>' +
+    '<td style="text-align:right;font-size:10px;color:#666;vertical-align:top">' +
+      'Protocolo: <strong>' + v(r.protocolo) + '</strong><br>Enviado: ' + (r.data_envio ? new Date(r.data_envio).toLocaleString('pt-BR') : '—') +
+    '</td>' +
+  '</tr></table>';
+
+  h += tbl('<tr><td colspan="4" style="padding:4px 8px;font-size:11px;font-weight:bold;border:1px solid #ccc;text-decoration:underline">PARA USO DA ESCOLA</td></tr>' +
+    lin4('Nº de Matrícula','','Nº do RA','','Visto do Funcionário','','Data',''));
+
+  h += tbl(secTitle('Requerimento') +
+    '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">Aluno(a): <strong>' + v(r.aluno_nome) + '</strong></td></tr>' +
+    '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">Eu, <u>' + v(r.responsavel) + '</u> portador do RG <u>' + v(r.rg_responsavel) + '</u>, venho respeitosamente requerer a matrícula do aluno supracitado.</td></tr>' +
+    '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">No curso: <strong>' + v(r.curso) + ' – ' + v(r.periodo) + '</strong></td></tr>' +
+    '<tr>' +
+      '<td style="padding:6px 8px;font-size:12px;border:1px solid #ccc;width:20%"><strong>ED. INFANTIL</strong><br>PRÉ I ' + ck('PRÉ I') + '<br>PRÉ II ' + ck('PRÉ II') + '</td>' +
+      '<td style="padding:6px 8px;font-size:12px;border:1px solid #ccc;width:35%"><strong>FUNDAMENTAL I</strong><br>1º ANO ' + ck('1º ANO') + ' 2º ANO ' + ck('2º ANO') + '<br>3º ANO ' + ck('3º ANO') + ' 4º ANO ' + ck('4º ANO') + '<br>5º ANO ' + ck('5º ANO') + '</td>' +
+      '<td colspan="2" style="padding:6px 8px;font-size:12px;border:1px solid #ccc"><strong>FUNDAMENTAL II</strong><br>6º ANO ' + ck('6º ANO') + ' 7º ANO ' + ck('7º ANO') + '<br>8º ANO ' + ck('8º ANO') + ' 9º ANO ' + ck('9º ANO') + '</td>' +
+    '</tr>' +
+    '<tr><td style="padding:6px 8px;font-size:12px;border:1px solid #ccc"><strong>PERÍODO</strong></td>' +
+    '<td style="padding:6px 8px;font-size:12px;border:1px solid #ccc">MATUTINO ' + ckP('MATUTINO') + '</td>' +
+    '<td colspan="2" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">VESPERTINO ' + ckP('VESPERTINO') + '</td></tr>');
+
+  h += tbl(secTitle('Dados sobre o Aluno') +
+    lin('Nome do aluno(a)', r.aluno_nome) +
+    lin3('Data de Nascimento', r.aluno_nascimento, 'RG', r.aluno_rg, 'Religião', r.aluno_religiao) +
+    lin3('CPF', r.aluno_cpf, 'Naturalidade', r.aluno_cidade_nasc, 'Estado / País', v(r.aluno_estado_nasc) + ' / ' + v(r.aluno_pais_nasc)) +
+    lin('Endereço', r.aluno_endereco) +
+    lin3('Bairro', r.aluno_bairro, 'Cidade', r.aluno_cidade, 'CEP', r.aluno_cep) +
+    '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">Tem irmãos? ' + (r.irmaos === 'sim' ? '(✓) sim (  ) não' : '(  ) sim (✓) não') + (r.irmaos_qtd ? ' Quantos: <strong>' + r.irmaos_qtd + '</strong>' : '') + '</td></tr>' +
+    '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc"><strong>Com quem mora?</strong> ' + v(r.mora_com) + (r.mora_outros ? ' – ' + r.mora_outros : '') + '</td></tr>' +
+    '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc"><strong>Guarda:</strong> ' + v(r.guarda) + '</td></tr>');
+
+  h += tbl(secTitle('Ficha Médica') +
+    '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">Acompanhamento especializado? ' + (r.acompanhamento === 'sim' ? '(✓) sim (  ) não' : '(  ) sim (✓) não') + ' Diagnóstico: <strong>' + v(r.diagnostico) + '</strong></td></tr>' +
+    '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">Alergia? ' + (r.alergia === 'sim' ? '(✓) sim (  ) não' : '(  ) sim (✓) não') + ' Qual: <strong>' + v(r.alergia_qual) + '</strong></td></tr>' +
+    '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">Necessidade especial? ' + (r.nec_especial === 'sim' ? '(✓) sim (  ) não' : '(  ) sim (✓) não') + ' Qual: <strong>' + v(r.nec_especial_qual) + '</strong></td></tr>' +
+    '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">Medicação? ' + (r.medicacao === 'sim' ? '(✓) sim (  ) não' : '(  ) sim (✓) não') + ' Qual: <strong>' + v(r.medicacao_qual) + '</strong></td></tr>' +
+    '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">Restrição Ed. Física? ' + (r.restricao_edfis === 'sim' ? '(✓) sim (  ) não' : '(  ) sim (✓) não') + ' Qual: <strong>' + v(r.restricao_edfis_qual) + '</strong></td></tr>' +
+    lin3('Tipo Sanguíneo', r.tipo_sanguineo, 'Emergência – Nome', r.emerg_nome, 'Tel. Emergência', r.emerg_tel));
+
+  h += tbl(secTitle('Ficha Escolar') +
+    '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">Escola anterior? ' + (r.escola_anterior === 'sim' ? '(✓) sim (  ) não' : '(  ) sim (✓) não') + (r.escola_anterior_nome ? ' Nome: <strong>' + r.escola_anterior_nome + '</strong>' : '') + '</td></tr>' +
+    autRows);
+
+  h += tbl(secTitle('Pai do Aluno(a)') +
+    lin2('Nome', r.pai_nome, 'Data de Nascimento', r.pai_nascimento) +
+    lin4('Telefone', r.pai_tel, 'Celular', r.pai_cel, 'CPF', r.pai_cpf, 'RG', r.pai_rg) +
+    lin2('Profissão', r.pai_profissao, 'Religião', r.pai_religiao) +
+    lin('Endereço', r.pai_endereco) +
+    lin3('Bairro', r.pai_bairro, 'Cidade', r.pai_cidade, 'CEP', r.pai_cep) +
+    lin2('Empresa', r.pai_empresa, 'Tel. Comercial', r.pai_tel_comercial) +
+    lin('E-mail', r.pai_email));
+
+  h += tbl(secTitle('Mãe do Aluno(a)') +
+    lin2('Nome', r.mae_nome, 'Data de Nascimento', r.mae_nascimento) +
+    lin4('Telefone', r.mae_tel, 'Celular', r.mae_cel, 'CPF', r.mae_cpf, 'RG', r.mae_rg) +
+    lin2('Profissão', r.mae_profissao, 'Religião', r.mae_religiao) +
+    lin('Endereço', r.mae_endereco) +
+    lin3('Bairro', r.mae_bairro, 'Cidade', r.mae_cidade, 'CEP', r.mae_cep) +
+    lin2('Empresa', r.mae_empresa, 'Tel. Comercial', r.mae_tel_comercial) +
+    lin('E-mail', r.mae_email) +
+    '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">Situação: ' + (r.sit_pais === 'casados' ? '(✓) casados (  ) separados' : r.sit_pais === 'separados' ? '(  ) casados (✓) separados' : '(  ) casados (  ) separados') + '</td></tr>' +
+    lin2('Cônjuge da Mãe', r.conjuge_mae, 'Cônjuge do Pai', r.conjuge_pai));
+
+  h += tbl(secTitle('Responsável Financeiro') +
+    lin2('Nome', r.fin_nome, 'Parentesco', r.fin_parentesco) +
+    lin4('CPF', r.fin_cpf, 'RG', r.fin_rg, 'Nascimento', r.fin_nascimento, 'Telefone', r.fin_tel) +
+    lin2('Celular', r.fin_cel, 'Empresa', r.fin_empresa) +
+    lin('Endereço', r.fin_endereco) +
+    lin3('Bairro', r.fin_bairro, 'Cidade', r.fin_cidade, 'CEP', r.fin_cep) +
+    lin('Tel. Comercial', r.fin_tel_comercial));
+
+  h += tbl(secTitle('Comunicação') +
+    '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">WhatsApp: ' +
+    (r.whatsapp_para === 'mae' ? '(✓) Mãe' : '(  ) Mãe') + '  ' +
+    (r.whatsapp_para === 'pai' ? '(✓) Pai' : '(  ) Pai') + '  ' +
+    (r.whatsapp_para === 'responsavel' ? '(✓) Responsável' : '(  ) Responsável') + '</td></tr>' +
+    '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">Saída sozinho? ' + (r.saida_sozinho === 'sim' ? '(✓) sim (  ) não' : '(  ) sim (✓) não') + '</td></tr>');
+
+  h += tbl(secTitle('Considerações da Família') +
+    '<tr><td colspan="4" style="padding:10px 8px;font-size:12px;border:1px solid #ccc;min-height:60px">' + (v(r.observacoes) || '&nbsp;<br>&nbsp;<br>&nbsp;') + '</td></tr>');
+
+  h += tbl('<tr><td colspan="4" style="padding:8px;font-size:11px;border:1px solid #ccc">' +
+    '<strong>Obs:</strong><br>' +
+    '* <u>Não</u> faz parte do currículo escolar as comemorações como festa junina, carnaval e halloween. Serão ministradas aulas de Educação Cristã.<br>' +
+    '* A escola <u>não</u> pode medicar o aluno.' +
+    '</td></tr>');
+
+  h += '<div style="text-align:center;margin-top:16px;font-size:12px"><strong>Osasco, ' + dataEnvio + '.</strong></div>';
+  h += '</div>'; // page-break-after
+
+  return h;
+}
+
+function exportarTodos() {
+  if (!dados.length) { alert('Nenhum dado para exportar.'); return; }
+
+  // Respeita filtros ativos
+  var busca = document.getElementById('busca').value.toLowerCase();
+  var fp = document.getElementById('fil-periodo').value;
+  var ft = document.getElementById('fil-tick').value;
+
+  var filtrados = dados.filter(function(r) {
+    var nome = (r.aluno_nome || '').toLowerCase();
+    var resp = (r.responsavel || '').toLowerCase();
+    if (busca && nome.indexOf(busca) < 0 && resp.indexOf(busca) < 0) return false;
+    if (turmaAtiva && r.curso !== turmaAtiva) return false;
+    if (fp && (r.periodo || '').indexOf(fp) < 0) return false;
+    if (statAtivo && seg(r.curso) !== statAtivo) return false;
+    if (ft === 'pag_ok' && !r.tick_pagamento) return false;
+    if (ft === 'cont_ok' && !r.tick_contrato) return false;
+    if (ft === 'tudo_ok' && (!r.tick_pagamento || !r.tick_contrato)) return false;
+    if (ft === 'tudo_pend' && (r.tick_pagamento || r.tick_contrato)) return false;
+    return true;
+  });
+
+  if (!filtrados.length) { alert('Nenhum aluno com os filtros atuais.'); return; }
+
+  var corpo = filtrados.map(function(r) { return gerarFichaHTML(r); }).join('');
+
+  var html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
+    '<title>Requerimentos Gênesis Life 2026</title>' +
+    '<style>body{margin:20px;font-family:Arial,sans-serif} @media print{@page{margin:15mm} body{margin:0}}</style>' +
+    '</head><body>' + corpo + '</body></html>';
+
+  var blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'requerimentos_genesis_2026.html';
+  a.click();
 }
 
 // Inicia
