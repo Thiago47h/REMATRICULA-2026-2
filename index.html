@@ -588,9 +588,9 @@ function abrirModal(id) {
     secTitle('Comunicação') +
     '<tr><td colspan="4" style="padding:6px 8px;font-size:13px;border:1px solid #ccc">' +
       'Quem receberá as mensagens via WhatsApp do Colégio (apenas 1 responsável):<br><br>' +
-      (r.whatsapp_para === 'mae' ? '(✓) Mãe' : '(  ) Mãe') + '&nbsp;&nbsp;&nbsp;' +
-      (r.whatsapp_para === 'pai' ? '(✓) Pai' : '(  ) Pai') + '&nbsp;&nbsp;&nbsp;' +
-      (r.whatsapp_para === 'responsavel' ? '(✓) Responsável' : '(  ) Responsável') +
+      (r.whatsapp_para === 'Mãe' || r.whatsapp_para === 'mae' ? '(✓) Mãe' : '(  ) Mãe') + '&nbsp;&nbsp;&nbsp;' +
+      (r.whatsapp_para === 'Pai' || r.whatsapp_para === 'pai' ? '(✓) Pai' : '(  ) Pai') + '&nbsp;&nbsp;&nbsp;' +
+      (r.whatsapp_para === 'Responsável' || r.whatsapp_para === 'responsavel' ? '(✓) Responsável' : '(  ) Responsável') +
     '</td></tr>' +
     '<tr><td colspan="4" style="padding:6px 8px;font-size:13px;border:1px solid #ccc">' +
       'O aluno pode sair sozinho? &nbsp;' +
