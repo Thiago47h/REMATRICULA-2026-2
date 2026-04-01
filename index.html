@@ -852,9 +852,9 @@ function gerarFichaHTML(r) {
 
   h += tbl(secTitle('Comunicação') +
     '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">WhatsApp: ' +
-    (r.whatsapp_para === 'mae' ? '(✓) Mãe' : '(  ) Mãe') + '  ' +
-    (r.whatsapp_para === 'pai' ? '(✓) Pai' : '(  ) Pai') + '  ' +
-    (r.whatsapp_para === 'responsavel' ? '(✓) Responsável' : '(  ) Responsável') + '</td></tr>' +
+    (r.whatsapp_para === 'Mãe' || r.whatsapp_para === 'mae' ? '(✓) Mãe' : '(  ) Mãe') + '  ' +
+    (r.whatsapp_para === 'Pai' || r.whatsapp_para === 'pai' ? '(✓) Pai' : '(  ) Pai') + '  ' +
+    (r.whatsapp_para === 'Responsável' || r.whatsapp_para === 'responsavel' ? '(✓) Responsável' : '(  ) Responsável') + '</td></tr>' +
     '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">Saída sozinho? ' + (r.saida_sozinho === 'sim' ? '(✓) sim (  ) não' : '(  ) sim (✓) não') + '</td></tr>');
 
   h += tbl(secTitle('Considerações da Família') +
