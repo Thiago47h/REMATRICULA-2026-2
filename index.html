@@ -222,11 +222,24 @@ body { font-family: 'Nunito', sans-serif; background: var(--main-bg); color: var
 
 /* PRINT */
 @media print {
-  .sidebar, .topbar, .turmas-wrap, .toolbar, .stats-grid, .lista, .modal-hdr, .modal-rodape { display: none !important; }
-  .overlay { display: block !important; position: static; padding: 0; background: none; backdrop-filter: none; }
-  .modal { box-shadow: none; border: none; border-radius: 0; }
-  .modal-corpo { padding: 0; }
-  body { background: #fff; display: block; }
+  @page {
+    margin: 15mm;
+    /* Remove header/footer do navegador */
+    size: A4;
+  }
+  /* Evita corte dentro de tabelas e linhas */
+  .modal-corpo table { page-break-inside: avoid; }
+  .modal-corpo tr { page-break-inside: avoid; page-break-after: auto; }
+  .modal-corpo thead { display: table-header-group; }
+  /* Esconde tudo */
+  html, body { background: #fff !important; }
+  body > * { display: none !important; }
+  /* Mostra só o overlay e modal-corpo */
+  .overlay { display: block !important; position: static !important; background: none !important; padding: 0 !important; }
+  .modal { display: block !important; box-shadow: none !important; border: none !important; border-radius: 0 !important; max-width: 100% !important; }
+  .modal-hdr, .modal-rodape { display: none !important; }
+  .modal-corpo { display: block !important; padding: 0 !important; background: #fff !important; }
+  .sidebar, .main-content, .topbar, .page-body { display: none !important; }
 }
 </style>
 </head>
@@ -373,7 +386,7 @@ body { font-family: 'Nunito', sans-serif; background: var(--main-bg); color: var
     <div class="modal-rodape">
       <button class="btn btn-outline" onclick="fecharModal()">Fechar</button>
       <button class="btn btn-red btn-sm" onclick="excluir()">🗑 Excluir</button>
-      <button class="btn btn-navy" onclick="window.print()">🖨 Imprimir / PDF</button>
+      <button class="btn btn-navy" onclick="imprimirFicha()">🖨 Imprimir / PDF</button>
     </div>
   </div>
 </div>
@@ -565,9 +578,9 @@ function abrirModal(id) {
     return '<tr><td style="padding:6px 8px;font-size:13px;border:1px solid #ccc;width:20%"><strong>' + a + ':</strong><br>' + v(va) + '</td><td style="padding:6px 8px;font-size:13px;border:1px solid #ccc;width:20%"><strong>' + b + ':</strong><br>' + v(vb) + '</td><td style="padding:6px 8px;font-size:13px;border:1px solid #ccc;width:20%"><strong>' + c + ':</strong><br>' + v(vc) + '</td><td style="padding:6px 8px;font-size:13px;border:1px solid #ccc;width:40%"><strong>' + d + ':</strong><br>' + v(vd) + '</td></tr>';
   }
   function secTitle(txt) {
-    return '<tr><td colspan="4" style="background:#7b1fa2;color:#fff;font-weight:bold;font-size:13px;padding:5px 8px;letter-spacing:.5px;text-transform:uppercase;border:1px solid #7b1fa2">' + txt + '</td></tr>';
+    return '<tr style="page-break-after:avoid"><td colspan="4" style="background:#7b1fa2;color:#fff;font-weight:bold;font-size:13px;padding:5px 8px;letter-spacing:.5px;text-transform:uppercase;border:1px solid #7b1fa2">' + txt + '</td></tr>';
   }
-  function tbl(rows) { return '<table style="width:100%;border-collapse:collapse;margin-bottom:12px">' + rows + '</table>'; }
+  function tbl(rows) { return '<table style="width:100%;border-collapse:collapse;margin-bottom:7px;page-break-inside:avoid;">' + rows + '</table>'; }
 
   var autRows = '';
   if (r.autorizados && r.autorizados.length) {
@@ -587,39 +600,150 @@ function abrirModal(id) {
   var logoEl = document.querySelector('.sidebar-logo img');
   var logoSrc = logoEl ? logoEl.src : '';
 
-  var h = '<div style="font-family:Arial,sans-serif;font-size:13px;color:#111;line-height:1.5">';
-  h += '<table style="width:100%;border-collapse:collapse;margin-bottom:18px"><tr>' +
-    '<td style="width:90px;vertical-align:middle"><img src="' + logoSrc + '" style="height:70px;width:auto"></td>' +
-    '<td style="vertical-align:middle;padding-left:12px"><div style="font-size:18px;font-weight:bold;color:#7b1fa2">COLÉGIO GÊNESIS LIFE</div><div style="font-size:15px;font-weight:bold;text-decoration:underline">REMATRÍCULA</div><div style="font-size:14px;font-weight:bold">REQUERIMENTO PARA O ANO DE 2026</div></td>' +
-    '<td style="text-align:right;font-size:11px;color:#666;vertical-align:top">Protocolo: <strong>' + v(r.protocolo) + '</strong><br>Enviado: ' + (r.data_envio ? new Date(r.data_envio).toLocaleString('pt-BR') : '—') + '</td></tr></table>';
+  // ── Ficha estilizada ─────────────────────────────────────────
+  var S = {
+    wrap:   'font-family:Georgia,serif;font-size:12px;color:#1a1a2e;line-height:1.55;widows:3;orphans:3;',
+    tbl:    'width:100%;border-collapse:collapse;margin-bottom:7px;page-break-inside:avoid;',
+    sec:    'background:#6a0d91;color:#fff;font-family:Arial,sans-serif;font-weight:700;font-size:10.5px;padding:5px 10px;letter-spacing:.8px;text-transform:uppercase;',
+    td:     'padding:4px 7px;border:1px solid #d0c0e0;vertical-align:top;font-size:11px;',
+    lbl:    'font-family:Arial,sans-serif;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#7a5a9a;display:block;margin-bottom:2px;',
+    val:    'font-size:12px;color:#1a1a2e;border-bottom:1px solid #d0c0e0;min-height:16px;padding-bottom:2px;',
+  };
+  function campo(lbl,val){ return '<div><span style="'+S.lbl+'">'+lbl+'</span><div style="'+S.val+'">'+(val||'&nbsp;')+'</div></div>'; }
+  function secTit(t){ return '<tr style="page-break-after:avoid"><td colspan="4" style="'+S.sec+'">'+t+'</td></tr>'; }
+  function row1(a,va){ return '<tr><td colspan="4" style="'+S.td+'">'+campo(a,va)+'</td></tr>'; }
+  function row2(a,va,b,vb){ return '<tr><td style="'+S.td+';width:50%" colspan="2">'+campo(a,va)+'</td><td style="'+S.td+';width:50%" colspan="2">'+campo(b,vb)+'</td></tr>'; }
+  function row3(a,va,b,vb,c,vc){ return '<tr><td style="'+S.td+';width:33%">'+campo(a,va)+'</td><td style="'+S.td+';width:33%">'+campo(b,vb)+'</td><td style="'+S.td+';width:34%" colspan="2">'+campo(c,vc)+'</td></tr>'; }
+  function row4(a,va,b,vb,c,vc,d,vd){ return '<tr><td style="'+S.td+';width:25%">'+campo(a,va)+'</td><td style="'+S.td+';width:25%">'+campo(b,vb)+'</td><td style="'+S.td+';width:25%">'+campo(c,vc)+'</td><td style="'+S.td+';width:25%">'+campo(d,vd)+'</td></tr>'; }
+  function tbl(rows){ return '<table style="'+S.tbl+'">'+rows+'</table>'; }
 
-  h += tbl('<tr><td colspan="4" style="padding:5px 8px;font-size:12px;font-weight:bold;border:1px solid #ccc;text-decoration:underline">PARA USO DA ESCOLA</td></tr>' + lin4('Nº de Matrícula','','Nº do RA','','Visto do Funcionário','','Data',''));
-  h += tbl(secTitle('Requerimento') +
-    '<tr><td colspan="4" style="padding:8px;font-size:13px;border:1px solid #ccc">Aluno(a): <strong>' + v(r.aluno_nome) + '</strong></td></tr>' +
-    '<tr><td colspan="4" style="padding:8px;font-size:13px;border:1px solid #ccc">Eu, <u>' + v(r.responsavel) + '</u>&nbsp; portador do RG <u>' + v(r.rg_responsavel) + '</u>, venho respeitosamente requerer a matrícula do aluno supracitado.</td></tr>' +
-    '<tr><td colspan="4" style="padding:8px;font-size:13px;border:1px solid #ccc">No curso: <strong>' + v(r.curso) + ' – ' + v(r.periodo) + '</strong></td></tr>' +
-    '<tr><td style="padding:8px;font-size:13px;border:1px solid #ccc;width:20%"><strong>ED. INFANTIL</strong><br><br>PRÉ I &nbsp;' + ck('PRÉ I') + '<br>PRÉ II ' + ck('PRÉ II') + '</td><td style="padding:8px;font-size:13px;border:1px solid #ccc;width:35%"><strong>FUNDAMENTAL I</strong><br><br>1º ANO ' + ck('1º ANO') + '&nbsp;&nbsp; 2º ANO ' + ck('2º ANO') + '<br>3º ANO ' + ck('3º ANO') + '&nbsp;&nbsp; 4º ANO ' + ck('4º ANO') + '<br>5º ANO ' + ck('5º ANO') + '</td><td colspan="2" style="padding:8px;font-size:13px;border:1px solid #ccc"><strong>FUNDAMENTAL II</strong><br><br>6º ANO ' + ck('6º ANO') + '&nbsp;&nbsp; 7º ANO ' + ck('7º ANO') + '<br>8º ANO ' + ck('8º ANO') + '&nbsp;&nbsp; 9º ANO ' + ck('9º ANO') + '</td></tr>' +
-    '<tr><td style="padding:8px;font-size:13px;border:1px solid #ccc"><strong>PERÍODO</strong></td><td style="padding:8px;font-size:13px;border:1px solid #ccc">MATUTINO ' + ckP('MATUTINO') + '</td><td colspan="2" style="padding:8px;font-size:13px;border:1px solid #ccc">VESPERTINO ' + ckP('VESPERTINO') + '</td></tr>');
-  h += tbl(secTitle('Dados sobre o Aluno') + lin('Nome do aluno(a)', r.aluno_nome) + lin3('Data de Nascimento', r.aluno_nascimento, 'RG', r.aluno_rg, 'Religião', r.aluno_religiao) + lin3('CPF', r.aluno_cpf, 'Naturalidade', r.aluno_cidade_nasc, 'Estado / País', v(r.aluno_estado_nasc) + ' / ' + v(r.aluno_pais_nasc)) + lin('Endereço', r.aluno_endereco) + lin3('Bairro', r.aluno_bairro, 'Cidade', r.aluno_cidade, 'CEP', r.aluno_cep) + '<tr><td colspan="4" style="padding:6px 8px;font-size:13px;border:1px solid #ccc">Tem irmãos? &nbsp;' + (r.irmaos === 'sim' ? '(✓) sim &nbsp; (  ) não' : '(  ) sim &nbsp; (✓) não') + (r.irmaos_qtd ? '&nbsp;&nbsp; Quantos: <strong>' + r.irmaos_qtd + '</strong>' : '') + '</td></tr>' + '<tr><td colspan="4" style="padding:6px 8px;font-size:13px;border:1px solid #ccc"><strong>Com quem mora o aluno?</strong><br>' + v(r.mora_com) + (r.mora_outros ? ' – ' + r.mora_outros : '') + '</td></tr>' + '<tr><td colspan="4" style="padding:6px 8px;font-size:13px;border:1px solid #ccc"><strong>Em caso de pais separados, de quem é a guarda?</strong> ' + v(r.guarda) + '</td></tr>');
-  h += tbl(secTitle('Ficha Médica') + '<tr><td colspan="4" style="padding:6px 8px;font-size:13px;border:1px solid #ccc">Faz acompanhamento psicológico/psicopedagógico/fonoaudiológico/psiquiátrico?<br>' + (r.acompanhamento === 'sim' ? '(✓) sim &nbsp; (  ) não' : '(  ) sim &nbsp; (✓) não') + '&nbsp;&nbsp; Diagnóstico: <strong>' + v(r.diagnostico) + '</strong></td></tr>' + '<tr><td colspan="4" style="padding:6px 8px;font-size:13px;border:1px solid #ccc">Tem algum tipo de alergia? &nbsp;' + (r.alergia === 'sim' ? '(✓) sim &nbsp; (  ) não' : '(  ) sim &nbsp; (✓) não') + '&nbsp;&nbsp; Qual: <strong>' + v(r.alergia_qual) + '</strong></td></tr>' + '<tr><td colspan="4" style="padding:6px 8px;font-size:13px;border:1px solid #ccc">É portador de alguma necessidade especial? &nbsp;' + (r.nec_especial === 'sim' ? '(✓) sim &nbsp; (  ) não' : '(  ) sim &nbsp; (✓) não') + '&nbsp;&nbsp; Qual: <strong>' + v(r.nec_especial_qual) + '</strong></td></tr>' + '<tr><td colspan="4" style="padding:6px 8px;font-size:13px;border:1px solid #ccc">Faz uso de alguma medicação? &nbsp;' + (r.medicacao === 'sim' ? '(✓) sim &nbsp; (  ) não' : '(  ) sim &nbsp; (✓) não') + '&nbsp;&nbsp; Qual: <strong>' + v(r.medicacao_qual) + '</strong></td></tr>' + '<tr><td colspan="4" style="padding:6px 8px;font-size:13px;border:1px solid #ccc">Apresenta problema de saúde que impeça aulas de Educação Física? &nbsp;' + (r.restricao_edfis === 'sim' ? '(✓) sim &nbsp; (  ) não' : '(  ) sim &nbsp; (✓) não') + '&nbsp;&nbsp; Qual: <strong>' + v(r.restricao_edfis_qual) + '</strong></td></tr>' + lin3('Tipo Sanguíneo', r.tipo_sanguineo, 'Emergência – Nome', r.emerg_nome, 'Tel. Emergência', r.emerg_tel));
-  h += tbl(secTitle('Ficha Escolar') + '<tr><td colspan="4" style="padding:6px 8px;font-size:13px;border:1px solid #ccc">Estudou anteriormente em escola particular? &nbsp;' + (r.escola_anterior === 'sim' ? '(✓) sim &nbsp; (  ) não' : '(  ) sim &nbsp; (✓) não') + (r.escola_anterior_nome ? '&nbsp;&nbsp; Nome: <strong>' + r.escola_anterior_nome + '</strong>' : '') + '</td></tr>' + autRows);
-  h += tbl(secTitle('Pai do Aluno(a)') + lin2('Nome', r.pai_nome, 'Data de Nascimento', r.pai_nascimento) + lin4('Telefone', r.pai_tel, 'Celular', r.pai_cel, 'CPF', r.pai_cpf, 'RG', r.pai_rg) + lin2('Profissão', r.pai_profissao, 'Religião', r.pai_religiao) + lin('Endereço', r.pai_endereco) + lin3('Bairro', r.pai_bairro, 'Cidade', r.pai_cidade, 'CEP', r.pai_cep) + lin2('Empresa', r.pai_empresa, 'Tel. Comercial', r.pai_tel_comercial) + lin('E-mail', r.pai_email));
-  h += tbl(secTitle('Mãe do Aluno(a)') + lin2('Nome', r.mae_nome, 'Data de Nascimento', r.mae_nascimento) + lin4('Telefone', r.mae_tel, 'Celular', r.mae_cel, 'CPF', r.mae_cpf, 'RG', r.mae_rg) + lin2('Profissão', r.mae_profissao, 'Religião', r.mae_religiao) + lin('Endereço', r.mae_endereco) + lin3('Bairro', r.mae_bairro, 'Cidade', r.mae_cidade, 'CEP', r.mae_cep) + lin2('Empresa', r.mae_empresa, 'Tel. Comercial', r.mae_tel_comercial) + lin('E-mail', r.mae_email) + '<tr><td colspan="4" style="padding:6px 8px;font-size:13px;border:1px solid #ccc">Relacionamento dos pais: &nbsp;' + (r.sit_pais === 'casados' ? '(✓) casados &nbsp; (  ) separados' : r.sit_pais === 'separados' ? '(  ) casados &nbsp; (✓) separados' : '(  ) casados &nbsp; (  ) separados') + '</td></tr>' + lin2('Cônjuge da Mãe', r.conjuge_mae, 'Cônjuge do Pai', r.conjuge_pai));
-  h += tbl(secTitle('Responsável Financeiro (preencher caso não seja pai ou mãe)') + lin2('Nome', r.fin_nome, 'Parentesco', r.fin_parentesco) + lin4('CPF', r.fin_cpf, 'RG', r.fin_rg, 'Data de Nascimento', r.fin_nascimento, 'Telefone', r.fin_tel) + lin2('Celular', r.fin_cel, 'Empresa', r.fin_empresa) + lin('Endereço', r.fin_endereco) + lin3('Bairro', r.fin_bairro, 'Cidade', r.fin_cidade, 'CEP', r.fin_cep) + lin('Tel. Comercial', r.fin_tel_comercial));
-  h += tbl(secTitle('Comunicação') + '<tr><td colspan="4" style="padding:6px 8px;font-size:13px;border:1px solid #ccc">Quem receberá as mensagens via WhatsApp do Colégio (apenas 1 responsável):<br><br>' + (r.whatsapp_para === 'mae' ? '(✓) Mãe' : '(  ) Mãe') + '&nbsp;&nbsp;&nbsp;' + (r.whatsapp_para === 'pai' ? '(✓) Pai' : '(  ) Pai') + '&nbsp;&nbsp;&nbsp;' + (r.whatsapp_para === 'responsavel' ? '(✓) Responsável' : '(  ) Responsável') + '</td></tr>' + '<tr><td colspan="4" style="padding:6px 8px;font-size:13px;border:1px solid #ccc">O aluno pode sair sozinho? &nbsp;' + (r.saida_sozinho === 'sim' ? '(✓) sim &nbsp; (  ) não' : '(  ) sim &nbsp; (✓) não') + '</td></tr>');
-  h += tbl(secTitle('Considerações da Família') + '<tr><td colspan="4" style="padding:10px 8px;font-size:13px;border:1px solid #ccc;min-height:80px">' + (v(r.observacoes) || '&nbsp;<br>&nbsp;<br>&nbsp;<br>&nbsp;') + '</td></tr>');
-  h += tbl('<tr><td colspan="4" style="padding:8px;font-size:12px;border:1px solid #ccc"><strong>Obs:</strong><br><br>* <u>Não</u> faz parte do currículo escolar as comemorações como festa junina, carnaval e halloween. Serão ministradas aulas de Educação Cristã, tendo como base a Bíblia Sagrada.<br><br>* A escola <u>não</u> pode medicar o aluno.</td></tr>');
-  h += '<br><div style="text-align:center;font-size:13px"><strong>Osasco, ' + dataEnvio + '.</strong></div>';
-  h += '<p style="margin-top:24px;font-size:10px;color:#aaa;text-align:center">Colégio Gênesis Life · Osasco, SP · Gerado em ' + new Date().toLocaleDateString('pt-BR') + '</p>';
+  var h = '<div style="'+S.wrap+'">';
+
+  // Cabeçalho
+  h += '<table style="width:100%;border-collapse:collapse;margin-bottom:16px;border-bottom:3px solid #6a0d91;padding-bottom:10px"><tr>' +
+    '<td style="width:80px;vertical-align:middle"><img src="'+logoSrc+'" style="height:64px;width:auto"></td>' +
+    '<td style="vertical-align:middle;padding-left:14px">' +
+      '<div style="font-family:Arial,sans-serif;font-size:17px;font-weight:900;color:#6a0d91;letter-spacing:.5px">COLÉGIO GÊNESIS LIFE</div>' +
+      '<div style="font-family:Arial,sans-serif;font-size:13px;font-weight:700;color:#1a1a2e;margin-top:2px">REQUERIMENTO DE REMATRÍCULA – 2026</div>' +
+      '<div style="font-family:Arial,sans-serif;font-size:10px;color:#7a5a9a;margin-top:3px">Osasco, SP</div>' +
+    '</td>' +
+    '<td style="text-align:right;vertical-align:top;padding-top:4px">' +
+      '<div style="font-family:Arial,sans-serif;font-size:9.5px;color:#7a5a9a;text-align:right">' +
+        'Protocolo: <strong style="color:#6a0d91">'+v(r.protocolo)+'</strong>' +
+      '</div>' +
+    '</td>' +
+  '</tr></table>';
+
+  // Para uso da escola
+  h += '<table style="'+S.tbl+'border:1px solid #c89de0;border-radius:4px;margin-bottom:7px"><tr>' +
+    '<td style="background:#f5eeff;padding:5px 10px;font-family:Arial,sans-serif;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6a0d91;border-bottom:1px solid #c89de0" colspan="4">Para uso da escola</td></tr><tr>' +
+    '<td style="'+S.td+';width:25%">'+campo('Nº de Matrícula','')+'</td>' +
+    '<td style="'+S.td+';width:25%">'+campo('Nº do RA','')+'</td>' +
+    '<td style="'+S.td+';width:25%">'+campo('Visto do Funcionário','')+'</td>' +
+    '<td style="'+S.td+';width:25%">'+campo('Data','')+'</td>' +
+  '</tr></table>';
+
+  // Requerimento
+  h += tbl(secTit('Requerimento') +
+    row1('Aluno(a)', '<strong>'+v(r.aluno_nome)+'</strong>') +
+    '<tr><td colspan="4" style="'+S.td+'"><span style="'+S.lbl+'">Declaração</span>Eu, <u>'+v(r.responsavel)+'</u>, portador do RG <u>'+v(r.rg_responsavel)+'</u>, venho requerer a matrícula do aluno supracitado.</td></tr>' +
+    row2('Curso / Turma','<strong>'+v(r.curso)+'</strong>','Período','<strong>'+v(r.periodo)+'</strong>') +
+    '<tr>' +
+    '<td style="'+S.td+';width:20%"><span style="'+S.lbl+'">Ed. Infantil</span>PRÉ I &nbsp;'+ck('PRÉ I')+'<br>PRÉ II '+ck('PRÉ II')+'</td>' +
+    '<td style="'+S.td+';width:35%"><span style="'+S.lbl+'">Fundamental I</span>1º '+ck('1º ANO')+' 2º '+ck('2º ANO')+' 3º '+ck('3º ANO')+' 4º '+ck('4º ANO')+' 5º '+ck('5º ANO')+'</td>' +
+    '<td style="'+S.td+'" colspan="2"><span style="'+S.lbl+'">Fundamental II</span>6º '+ck('6º ANO')+' 7º '+ck('7º ANO')+' 8º '+ck('8º ANO')+' 9º '+ck('9º ANO')+'</td>' +
+    '</tr>');
+
+  // Dados do aluno
+  h += tbl(secTit('Dados do Aluno') +
+    row1('Nome completo', v(r.aluno_nome)) +
+    row4('Data de Nascimento',v(r.aluno_nascimento),'RG',v(r.aluno_rg),'CPF',v(r.aluno_cpf),'Religião',v(r.aluno_religiao)) +
+    row3('Naturalidade',v(r.aluno_cidade_nasc),'Estado',v(r.aluno_estado_nasc),'País',v(r.aluno_pais_nasc)) +
+    row1('Endereço', v(r.aluno_endereco)) +
+    row3('Bairro',v(r.aluno_bairro),'Cidade',v(r.aluno_cidade),'CEP',v(r.aluno_cep)) +
+    row3('Tem irmãos?',(r.irmaos==='sim'?'(✓) Sim  (  ) Não':'(  ) Sim  (✓) Não'),'Quantos',v(r.irmaos_qtd),'Mora com',v(r.mora_com)+(r.mora_outros?' – '+r.mora_outros:'')) +
+    row1('Em caso de pais separados, de quem é a guarda?', v(r.guarda)));
+
+  // Ficha médica
+  h += tbl(secTit('Ficha Médica') +
+    row2('Acompanhamento psic./pedagógico/fono?',(r.acompanhamento==='sim'?'(✓) Sim  (  ) Não':'(  ) Sim  (✓) Não'),'Diagnóstico',v(r.diagnostico)) +
+    row2('Tem alergia?',(r.alergia==='sim'?'(✓) Sim  (  ) Não':'(  ) Sim  (✓) Não'),'Qual',v(r.alergia_qual)) +
+    row2('Necessidade especial?',(r.nec_especial==='sim'?'(✓) Sim  (  ) Não':'(  ) Sim  (✓) Não'),'Qual',v(r.nec_especial_qual)) +
+    row2('Faz uso de medicação?',(r.medicacao==='sim'?'(✓) Sim  (  ) Não':'(  ) Sim  (✓) Não'),'Qual',v(r.medicacao_qual)) +
+    row2('Restrição a Ed. Física?',(r.restricao_edfis==='sim'?'(✓) Sim  (  ) Não':'(  ) Sim  (✓) Não'),'Qual',v(r.restricao_edfis_qual)) +
+    row3('Tipo Sanguíneo',v(r.tipo_sanguineo),'Contato de Emergência',v(r.emerg_nome),'Telefone',v(r.emerg_tel)));
+
+  // Ficha escolar
+  h += tbl(secTit('Ficha Escolar') +
+    row2('Estudou em escola particular anteriormente?',(r.escola_anterior==='sim'?'(✓) Sim  (  ) Não':'(  ) Sim  (✓) Não'),'Nome da escola anterior',v(r.escola_anterior_nome)) +
+    (r.autorizados&&r.autorizados.length ? '<tr><td colspan="4" style="'+S.td+'"><span style="'+S.lbl+'">Autorizados a retirar o aluno (documento com foto obrigatório)</span>' +
+      '<table style="width:100%;border-collapse:collapse;margin-top:6px"><thead><tr style="background:#f5eeff">' +
+      '<th style="padding:4px 8px;border:1px solid #d0c0e0;text-align:left;font-size:10px">Nome</th>' +
+      '<th style="padding:4px 8px;border:1px solid #d0c0e0;text-align:left;font-size:10px">Parentesco</th>' +
+      '<th style="padding:4px 8px;border:1px solid #d0c0e0;text-align:left;font-size:10px">RG</th>' +
+      '<th style="padding:4px 8px;border:1px solid #d0c0e0;text-align:left;font-size:10px">Telefone</th></tr></thead><tbody>' +
+      r.autorizados.map(function(a){return '<tr><td style="padding:4px 8px;border:1px solid #d0c0e0;font-size:11px">'+v(a.nome)+'</td><td style="padding:4px 8px;border:1px solid #d0c0e0;font-size:11px">'+v(a.parentesco)+'</td><td style="padding:4px 8px;border:1px solid #d0c0e0;font-size:11px">'+v(a.rg)+'</td><td style="padding:4px 8px;border:1px solid #d0c0e0;font-size:11px">'+v(a.tel)+'</td></tr>';}).join('') +
+      '</tbody></table></td></tr>' : ''));
+
+  // Pai
+  h += tbl(secTit('Pai do Aluno') +
+    row2('Nome',v(r.pai_nome),'Data de Nascimento',v(r.pai_nascimento)) +
+    row4('Telefone',v(r.pai_tel),'Celular',v(r.pai_cel),'CPF',v(r.pai_cpf),'RG',v(r.pai_rg)) +
+    row3('Profissão',v(r.pai_profissao),'Religião',v(r.pai_religiao),'Empresa',v(r.pai_empresa)) +
+    row1('Endereço',v(r.pai_endereco)) +
+    row4('Bairro',v(r.pai_bairro),'Cidade',v(r.pai_cidade),'CEP',v(r.pai_cep),'Tel. Comercial',v(r.pai_tel_comercial)) +
+    row1('E-mail',v(r.pai_email)));
+
+  // Mãe
+  h += tbl(secTit('Mãe do Aluno') +
+    row2('Nome',v(r.mae_nome),'Data de Nascimento',v(r.mae_nascimento)) +
+    row4('Telefone',v(r.mae_tel),'Celular',v(r.mae_cel),'CPF',v(r.mae_cpf),'RG',v(r.mae_rg)) +
+    row3('Profissão',v(r.mae_profissao),'Religião',v(r.mae_religiao),'Empresa',v(r.mae_empresa)) +
+    row1('Endereço',v(r.mae_endereco)) +
+    row4('Bairro',v(r.mae_bairro),'Cidade',v(r.mae_cidade),'CEP',v(r.mae_cep),'Tel. Comercial',v(r.mae_tel_comercial)) +
+    row1('E-mail',v(r.mae_email)) +
+    row3('Situação',(r.sit_pais==='casados'?'(✓) Casados  (  ) Separados':r.sit_pais==='separados'?'(  ) Casados  (✓) Separados':'(  ) Casados  (  ) Separados'),'Cônjuge da Mãe',v(r.conjuge_mae),'Cônjuge do Pai',v(r.conjuge_pai)));
+
+  // Responsável financeiro
+  h += tbl(secTit('Responsável Financeiro') +
+    row2('Nome',v(r.fin_nome),'Parentesco',v(r.fin_parentesco)) +
+    row4('CPF',v(r.fin_cpf),'RG',v(r.fin_rg),'Data de Nascimento',v(r.fin_nascimento),'Telefone',v(r.fin_tel)) +
+    row3('Celular',v(r.fin_cel),'Empresa',v(r.fin_empresa),'Tel. Comercial',v(r.fin_tel_comercial)) +
+    row1('Endereço',v(r.fin_endereco)) +
+    row3('Bairro',v(r.fin_bairro),'Cidade',v(r.fin_cidade),'CEP',v(r.fin_cep)));
+
+  // Comunicação
+  h += tbl(secTit('Comunicação e Saída') +
+    '<tr><td colspan="4" style="'+S.td+'"><span style="'+S.lbl+'">WhatsApp (apenas 1 responsável)</span>' +
+    (r.whatsapp_para==='mae'?'<strong>(✓) Mãe</strong>':'(  ) Mãe') + '&nbsp;&nbsp;&nbsp;' +
+    (r.whatsapp_para==='pai'?'<strong>(✓) Pai</strong>':'(  ) Pai') + '&nbsp;&nbsp;&nbsp;' +
+    (r.whatsapp_para==='responsavel'?'<strong>(✓) Responsável</strong>':'(  ) Responsável') + '</td></tr>' +
+    row1('O aluno pode sair sozinho?',(r.saida_sozinho==='sim'?'(✓) Sim  (  ) Não':'(  ) Sim  (✓) Não')));
+
+  // Observações
+  h += tbl(secTit('Considerações da Família') +
+    '<tr><td colspan="4" style="'+S.td+';min-height:60px">'+campo('Observações',v(r.observacoes)||'')+'</td></tr>');
+
+  // Obs escola
+  h += '<div style="border:1px solid #d0c0e0;border-radius:4px;padding:10px 12px;font-family:Arial,sans-serif;font-size:10.5px;color:#444;margin-bottom:16px;background:#fdf9ff;page-break-inside:avoid;page-break-before:avoid">' +
+    '<strong style="color:#6a0d91">Observações importantes:</strong><br>' +
+    '• Não faz parte do currículo as comemorações de festa junina, carnaval e halloween. Serão ministradas aulas de Educação Cristã com base na Bíblia Sagrada.<br>' +
+    '• A escola não pode medicar o aluno.' +
+    '</div>';
+
+  // Assinatura
+  h += '<div style="margin-top:40px;page-break-inside:avoid;page-break-before:avoid">' +
+    '<div style="width:60%;margin:0 auto;text-align:center">' +
+      '<div style="border-top:1.5px solid #333;padding-top:8px;font-family:Arial,sans-serif;font-size:11.5px;color:#1a1a2e;font-weight:600">Assinatura do Responsável</div>' +
+      '<div style="margin-top:4px;font-family:Arial,sans-serif;font-size:10px;color:#888">Osasco, ' + dataEnvio + '</div>' +
+    '</div>' +
+  '</div>';
+
   h += '</div>';
+  // ────────────────────────────────────────────────────────────
 
   document.getElementById('modal-corpo').innerHTML = h;
   document.getElementById('overlay').classList.add('aberto');
-}
-
-function fecharModal() {
-  document.getElementById('overlay').classList.remove('aberto');
-  idAtual = null;
 }
 
 async function excluir() {
@@ -634,6 +758,13 @@ async function excluir() {
     carregar();
   } catch(e) { alert('Erro ao excluir: ' + e.message); }
 }
+
+function fecharModal() {
+  document.getElementById('overlay').classList.remove('aberto');
+  idAtual = null;
+}
+
+
 
 function exportarCSV() {
   if (!dados.length) { alert('Nenhum dado para exportar.'); return; }
@@ -659,7 +790,7 @@ function gerarFichaHTML(r) {
   function lin3(a, va, b, vb, c, vc) { return '<tr><td style="padding:6px 8px;font-size:12px;border:1px solid #ccc;width:25%"><strong>' + a + ':</strong><br>' + v(va) + '</td><td style="padding:6px 8px;font-size:12px;border:1px solid #ccc;width:25%"><strong>' + b + ':</strong><br>' + v(vb) + '</td><td style="padding:6px 8px;font-size:12px;border:1px solid #ccc;width:25%"><strong>' + c + ':</strong><br>' + v(vc) + '</td><td style="border:1px solid #ccc"></td></tr>'; }
   function lin4(a, va, b, vb, c, vc, d, vd) { return '<tr><td style="padding:6px 8px;font-size:12px;border:1px solid #ccc;width:20%"><strong>' + a + ':</strong><br>' + v(va) + '</td><td style="padding:6px 8px;font-size:12px;border:1px solid #ccc;width:20%"><strong>' + b + ':</strong><br>' + v(vb) + '</td><td style="padding:6px 8px;font-size:12px;border:1px solid #ccc;width:20%"><strong>' + c + ':</strong><br>' + v(vc) + '</td><td style="padding:6px 8px;font-size:12px;border:1px solid #ccc;width:40%"><strong>' + d + ':</strong><br>' + v(vd) + '</td></tr>'; }
   function secTitle(txt) { return '<tr><td colspan="4" style="background:#7b1fa2;color:#fff;font-weight:bold;font-size:12px;padding:5px 8px;letter-spacing:.5px;text-transform:uppercase;border:1px solid #7b1fa2">' + txt + '</td></tr>'; }
-  function tbl(rows) { return '<table style="width:100%;border-collapse:collapse;margin-bottom:10px">' + rows + '</table>'; }
+  function tbl(rows) { return '<table style="width:100%;border-collapse:collapse;margin-bottom:7px;page-break-inside:avoid;">' + rows + '</table>'; }
 
   var curso = v(r.curso).toUpperCase();
   function ck(val) { return curso === val ? '(✓)' : '(  )'; }
@@ -677,20 +808,119 @@ function gerarFichaHTML(r) {
     autRows += '</tbody></table></td></tr>';
   }
 
-  var h = '<div style="font-family:Arial,sans-serif;font-size:12px;color:#111;line-height:1.5;page-break-after:always">';
-  h += '<table style="width:100%;border-collapse:collapse;margin-bottom:14px"><tr><td style="width:80px;vertical-align:middle">' + (logoSrc ? '<img src="' + logoSrc + '" style="height:60px;width:auto">' : '') + '</td><td style="vertical-align:middle;padding-left:10px"><div style="font-size:16px;font-weight:bold;color:#7b1fa2">COLÉGIO GÊNESIS LIFE</div><div style="font-size:13px;font-weight:bold;text-decoration:underline">REMATRÍCULA</div><div style="font-size:12px;font-weight:bold">REQUERIMENTO PARA O ANO DE 2026</div></td><td style="text-align:right;font-size:10px;color:#666;vertical-align:top">Protocolo: <strong>' + v(r.protocolo) + '</strong><br>Enviado: ' + (r.data_envio ? new Date(r.data_envio).toLocaleString('pt-BR') : '—') + '</td></tr></table>';
-  h += tbl('<tr><td colspan="4" style="padding:4px 8px;font-size:11px;font-weight:bold;border:1px solid #ccc;text-decoration:underline">PARA USO DA ESCOLA</td></tr>' + lin4('Nº de Matrícula','','Nº do RA','','Visto do Funcionário','','Data',''));
-  h += tbl(secTitle('Requerimento') + '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">Aluno(a): <strong>' + v(r.aluno_nome) + '</strong></td></tr><tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">Eu, <u>' + v(r.responsavel) + '</u> portador do RG <u>' + v(r.rg_responsavel) + '</u>, venho respeitosamente requerer a matrícula do aluno supracitado.</td></tr><tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">No curso: <strong>' + v(r.curso) + ' – ' + v(r.periodo) + '</strong></td></tr><tr><td style="padding:6px 8px;font-size:12px;border:1px solid #ccc;width:20%"><strong>ED. INFANTIL</strong><br>PRÉ I ' + ck('PRÉ I') + '<br>PRÉ II ' + ck('PRÉ II') + '</td><td style="padding:6px 8px;font-size:12px;border:1px solid #ccc;width:35%"><strong>FUNDAMENTAL I</strong><br>1º ANO ' + ck('1º ANO') + ' 2º ANO ' + ck('2º ANO') + '<br>3º ANO ' + ck('3º ANO') + ' 4º ANO ' + ck('4º ANO') + '<br>5º ANO ' + ck('5º ANO') + '</td><td colspan="2" style="padding:6px 8px;font-size:12px;border:1px solid #ccc"><strong>FUNDAMENTAL II</strong><br>6º ANO ' + ck('6º ANO') + ' 7º ANO ' + ck('7º ANO') + '<br>8º ANO ' + ck('8º ANO') + ' 9º ANO ' + ck('9º ANO') + '</td></tr><tr><td style="padding:6px 8px;font-size:12px;border:1px solid #ccc"><strong>PERÍODO</strong></td><td style="padding:6px 8px;font-size:12px;border:1px solid #ccc">MATUTINO ' + ckP('MATUTINO') + '</td><td colspan="2" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">VESPERTINO ' + ckP('VESPERTINO') + '</td></tr>');
-  h += tbl(secTitle('Dados sobre o Aluno') + lin('Nome do aluno(a)', r.aluno_nome) + lin3('Data de Nascimento', r.aluno_nascimento, 'RG', r.aluno_rg, 'Religião', r.aluno_religiao) + lin3('CPF', r.aluno_cpf, 'Naturalidade', r.aluno_cidade_nasc, 'Estado / País', v(r.aluno_estado_nasc) + ' / ' + v(r.aluno_pais_nasc)) + lin('Endereço', r.aluno_endereco) + lin3('Bairro', r.aluno_bairro, 'Cidade', r.aluno_cidade, 'CEP', r.aluno_cep) + '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">Tem irmãos? ' + (r.irmaos === 'sim' ? '(✓) sim (  ) não' : '(  ) sim (✓) não') + (r.irmaos_qtd ? ' Quantos: <strong>' + r.irmaos_qtd + '</strong>' : '') + '</td></tr><tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc"><strong>Com quem mora?</strong> ' + v(r.mora_com) + (r.mora_outros ? ' – ' + r.mora_outros : '') + '</td></tr><tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc"><strong>Guarda:</strong> ' + v(r.guarda) + '</td></tr>');
-  h += tbl(secTitle('Ficha Médica') + '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">Acompanhamento especializado? ' + (r.acompanhamento === 'sim' ? '(✓) sim (  ) não' : '(  ) sim (✓) não') + ' Diagnóstico: <strong>' + v(r.diagnostico) + '</strong></td></tr><tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">Alergia? ' + (r.alergia === 'sim' ? '(✓) sim (  ) não' : '(  ) sim (✓) não') + ' Qual: <strong>' + v(r.alergia_qual) + '</strong></td></tr><tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">Necessidade especial? ' + (r.nec_especial === 'sim' ? '(✓) sim (  ) não' : '(  ) sim (✓) não') + ' Qual: <strong>' + v(r.nec_especial_qual) + '</strong></td></tr><tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">Medicação? ' + (r.medicacao === 'sim' ? '(✓) sim (  ) não' : '(  ) sim (✓) não') + ' Qual: <strong>' + v(r.medicacao_qual) + '</strong></td></tr><tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">Restrição Ed. Física? ' + (r.restricao_edfis === 'sim' ? '(✓) sim (  ) não' : '(  ) sim (✓) não') + ' Qual: <strong>' + v(r.restricao_edfis_qual) + '</strong></td></tr>' + lin3('Tipo Sanguíneo', r.tipo_sanguineo, 'Emergência – Nome', r.emerg_nome, 'Tel. Emergência', r.emerg_tel));
-  h += tbl(secTitle('Ficha Escolar') + '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">Escola anterior? ' + (r.escola_anterior === 'sim' ? '(✓) sim (  ) não' : '(  ) sim (✓) não') + (r.escola_anterior_nome ? ' Nome: <strong>' + r.escola_anterior_nome + '</strong>' : '') + '</td></tr>' + autRows);
-  h += tbl(secTitle('Pai do Aluno(a)') + lin2('Nome', r.pai_nome, 'Data de Nascimento', r.pai_nascimento) + lin4('Telefone', r.pai_tel, 'Celular', r.pai_cel, 'CPF', r.pai_cpf, 'RG', r.pai_rg) + lin2('Profissão', r.pai_profissao, 'Religião', r.pai_religiao) + lin('Endereço', r.pai_endereco) + lin3('Bairro', r.pai_bairro, 'Cidade', r.pai_cidade, 'CEP', r.pai_cep) + lin2('Empresa', r.pai_empresa, 'Tel. Comercial', r.pai_tel_comercial) + lin('E-mail', r.pai_email));
-  h += tbl(secTitle('Mãe do Aluno(a)') + lin2('Nome', r.mae_nome, 'Data de Nascimento', r.mae_nascimento) + lin4('Telefone', r.mae_tel, 'Celular', r.mae_cel, 'CPF', r.mae_cpf, 'RG', r.mae_rg) + lin2('Profissão', r.mae_profissao, 'Religião', r.mae_religiao) + lin('Endereço', r.mae_endereco) + lin3('Bairro', r.mae_bairro, 'Cidade', r.mae_cidade, 'CEP', r.mae_cep) + lin2('Empresa', r.mae_empresa, 'Tel. Comercial', r.mae_tel_comercial) + lin('E-mail', r.mae_email) + '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">Situação: ' + (r.sit_pais === 'casados' ? '(✓) casados (  ) separados' : r.sit_pais === 'separados' ? '(  ) casados (✓) separados' : '(  ) casados (  ) separados') + '</td></tr>' + lin2('Cônjuge da Mãe', r.conjuge_mae, 'Cônjuge do Pai', r.conjuge_pai));
-  h += tbl(secTitle('Responsável Financeiro') + lin2('Nome', r.fin_nome, 'Parentesco', r.fin_parentesco) + lin4('CPF', r.fin_cpf, 'RG', r.fin_rg, 'Nascimento', r.fin_nascimento, 'Telefone', r.fin_tel) + lin2('Celular', r.fin_cel, 'Empresa', r.fin_empresa) + lin('Endereço', r.fin_endereco) + lin3('Bairro', r.fin_bairro, 'Cidade', r.fin_cidade, 'CEP', r.fin_cep) + lin('Tel. Comercial', r.fin_tel_comercial));
-  h += tbl(secTitle('Comunicação') + '<tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">WhatsApp: ' + (r.whatsapp_para === 'mae' ? '(✓) Mãe' : '(  ) Mãe') + '  ' + (r.whatsapp_para === 'pai' ? '(✓) Pai' : '(  ) Pai') + '  ' + (r.whatsapp_para === 'responsavel' ? '(✓) Responsável' : '(  ) Responsável') + '</td></tr><tr><td colspan="4" style="padding:6px 8px;font-size:12px;border:1px solid #ccc">Saída sozinho? ' + (r.saida_sozinho === 'sim' ? '(✓) sim (  ) não' : '(  ) sim (✓) não') + '</td></tr>');
-  h += tbl(secTitle('Considerações da Família') + '<tr><td colspan="4" style="padding:10px 8px;font-size:12px;border:1px solid #ccc;min-height:60px">' + (v(r.observacoes) || '&nbsp;<br>&nbsp;<br>&nbsp;') + '</td></tr>');
-  h += tbl('<tr><td colspan="4" style="padding:8px;font-size:11px;border:1px solid #ccc"><strong>Obs:</strong><br>* <u>Não</u> faz parte do currículo escolar as comemorações como festa junina, carnaval e halloween. Serão ministradas aulas de Educação Cristã.<br>* A escola <u>não</u> pode medicar o aluno.</td></tr>');
-  h += '<div style="text-align:center;margin-top:16px;font-size:12px"><strong>Osasco, ' + dataEnvio + '.</strong></div>';
+  // Reutiliza o mesmo estilo bonito da visualização em tela
+  var S = {
+    wrap:  'font-family:Georgia,serif;font-size:11.5px;color:#1a1a2e;line-height:1.55;widows:3;orphans:3;',
+    tbl:   'width:100%;border-collapse:collapse;margin-bottom:7px;page-break-inside:avoid;',
+    sec:   'background:#6a0d91;color:#fff;font-family:Arial,sans-serif;font-weight:700;font-size:10px;padding:5px 10px;letter-spacing:.8px;text-transform:uppercase;',
+    td:    'padding:4px 7px;border:1px solid #d0c0e0;vertical-align:top;font-size:10.5px;',
+    lbl:   'font-family:Arial,sans-serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#7a5a9a;display:block;margin-bottom:2px;',
+    val:   'font-size:11.5px;color:#1a1a2e;border-bottom:1px solid #d0c0e0;min-height:14px;padding-bottom:1px;',
+  };
+  function campo(lbl,val){ return '<div><span style="'+S.lbl+'">'+lbl+'</span><div style="'+S.val+'">'+(val||'&nbsp;')+'</div></div>'; }
+  function secTit(t){ return '<tr style="page-break-after:avoid"><td colspan="4" style="'+S.sec+'">'+t+'</td></tr>'; }
+  function row1(a,va){ return '<tr><td colspan="4" style="'+S.td+'">'+campo(a,va)+'</td></tr>'; }
+  function row2(a,va,b,vb){ return '<tr><td style="'+S.td+';width:50%" colspan="2">'+campo(a,va)+'</td><td style="'+S.td+';width:50%" colspan="2">'+campo(b,vb)+'</td></tr>'; }
+  function row3(a,va,b,vb,c,vc){ return '<tr><td style="'+S.td+';width:33%">'+campo(a,va)+'</td><td style="'+S.td+';width:33%">'+campo(b,vb)+'</td><td style="'+S.td+';width:34%" colspan="2">'+campo(c,vc)+'</td></tr>'; }
+  function row4(a,va,b,vb,c,vc,d,vd){ return '<tr><td style="'+S.td+';width:25%">'+campo(a,va)+'</td><td style="'+S.td+';width:25%">'+campo(b,vb)+'</td><td style="'+S.td+';width:25%">'+campo(c,vc)+'</td><td style="'+S.td+';width:25%">'+campo(d,vd)+'</td></tr>'; }
+  function tbl(rows){ return '<table style="'+S.tbl+'">'+rows+'</table>'; }
+
+  var h = '<div style="'+S.wrap+'">'; // sem page-break-after para evitar pagina em branco
+
+  h += '<table style="width:100%;border-collapse:collapse;margin-bottom:14px;border-bottom:3px solid #6a0d91;padding-bottom:8px"><tr>' +
+    '<td style="width:72px;vertical-align:middle">'+(logoSrc?'<img src="'+logoSrc+'" style="height:58px;width:auto">':'')+'</td>' +
+    '<td style="vertical-align:middle;padding-left:12px">' +
+      '<div style="font-family:Arial,sans-serif;font-size:15px;font-weight:900;color:#6a0d91;letter-spacing:.5px">COLÉGIO GÊNESIS LIFE</div>' +
+      '<div style="font-family:Arial,sans-serif;font-size:12px;font-weight:700;color:#1a1a2e;margin-top:2px">REQUERIMENTO DE REMATRÍCULA – 2026</div>' +
+      '<div style="font-family:Arial,sans-serif;font-size:9.5px;color:#7a5a9a;margin-top:2px">Osasco, SP</div>' +
+    '</td>' +
+    '<td style="text-align:right;vertical-align:top">' +
+      '<div style="font-family:Arial,sans-serif;font-size:9px;color:#7a5a9a;text-align:right">' +
+        'Protocolo: <strong style="color:#6a0d91">'+v(r.protocolo)+'</strong>' +
+      '</div>' +
+    '</td>' +
+  '</tr></table>';
+
+  h += '<table style="'+S.tbl+'border:1px solid #c89de0;border-radius:3px;margin-bottom:10px"><tr>' +
+    '<td style="background:#f5eeff;padding:4px 10px;font-family:Arial,sans-serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6a0d91;border-bottom:1px solid #c89de0" colspan="4">Para uso da escola</td></tr><tr>' +
+    '<td style="'+S.td+';width:25%">'+campo('Nº de Matrícula','')+'</td>' +
+    '<td style="'+S.td+';width:25%">'+campo('Nº do RA','')+'</td>' +
+    '<td style="'+S.td+';width:25%">'+campo('Visto do Funcionário','')+'</td>' +
+    '<td style="'+S.td+';width:25%">'+campo('Data','')+'</td>' +
+  '</tr></table>';
+
+  h += tbl(secTit('Requerimento') +
+    row1('Aluno(a)','<strong>'+v(r.aluno_nome)+'</strong>') +
+    '<tr><td colspan="4" style="'+S.td+'"><span style="'+S.lbl+'">Declaração</span>Eu, <u>'+v(r.responsavel)+'</u>, portador do RG <u>'+v(r.rg_responsavel)+'</u>, venho requerer a matrícula do aluno supracitado.</td></tr>' +
+    row2('Curso / Turma','<strong>'+v(r.curso)+'</strong>','Período','<strong>'+v(r.periodo)+'</strong>') +
+    '<tr><td style="'+S.td+';width:20%"><span style="'+S.lbl+'">Ed. Infantil</span>PRÉ I '+ck('PRÉ I')+'<br>PRÉ II '+ck('PRÉ II')+'</td>' +
+    '<td style="'+S.td+';width:35%"><span style="'+S.lbl+'">Fundamental I</span>1º '+ck('1º ANO')+' 2º '+ck('2º ANO')+' 3º '+ck('3º ANO')+' 4º '+ck('4º ANO')+' 5º '+ck('5º ANO')+'</td>' +
+    '<td style="'+S.td+'" colspan="2"><span style="'+S.lbl+'">Fundamental II</span>6º '+ck('6º ANO')+' 7º '+ck('7º ANO')+' 8º '+ck('8º ANO')+' 9º '+ck('9º ANO')+'</td></tr>');
+
+  h += tbl(secTit('Dados do Aluno') +
+    row1('Nome completo',v(r.aluno_nome)) +
+    row4('Data de Nascimento',v(r.aluno_nascimento),'RG',v(r.aluno_rg),'CPF',v(r.aluno_cpf),'Religião',v(r.aluno_religiao)) +
+    row3('Naturalidade',v(r.aluno_cidade_nasc),'Estado',v(r.aluno_estado_nasc),'País',v(r.aluno_pais_nasc)) +
+    row1('Endereço',v(r.aluno_endereco)) +
+    row3('Bairro',v(r.aluno_bairro),'Cidade',v(r.aluno_cidade),'CEP',v(r.aluno_cep)) +
+    row3('Tem irmãos?',(r.irmaos==='sim'?'(✓) Sim  (  ) Não':'(  ) Sim  (✓) Não'),'Quantos',v(r.irmaos_qtd),'Mora com',v(r.mora_com)+(r.mora_outros?' – '+r.mora_outros:'')) +
+    row1('Guarda (pais separados)',v(r.guarda)));
+
+  h += tbl(secTit('Ficha Médica') +
+    row2('Acompanhamento especializado?',(r.acompanhamento==='sim'?'(✓) Sim  (  ) Não':'(  ) Sim  (✓) Não'),'Diagnóstico',v(r.diagnostico)) +
+    row2('Alergia?',(r.alergia==='sim'?'(✓) Sim  (  ) Não':'(  ) Sim  (✓) Não'),'Qual',v(r.alergia_qual)) +
+    row2('Necessidade especial?',(r.nec_especial==='sim'?'(✓) Sim  (  ) Não':'(  ) Sim  (✓) Não'),'Qual',v(r.nec_especial_qual)) +
+    row2('Medicação?',(r.medicacao==='sim'?'(✓) Sim  (  ) Não':'(  ) Sim  (✓) Não'),'Qual',v(r.medicacao_qual)) +
+    row2('Restrição Ed. Física?',(r.restricao_edfis==='sim'?'(✓) Sim  (  ) Não':'(  ) Sim  (✓) Não'),'Qual',v(r.restricao_edfis_qual)) +
+    row3('Tipo Sanguíneo',v(r.tipo_sanguineo),'Emergência – Nome',v(r.emerg_nome),'Tel. Emergência',v(r.emerg_tel)));
+
+  h += tbl(secTit('Ficha Escolar') +
+    row2('Escola anterior?',(r.escola_anterior==='sim'?'(✓) Sim  (  ) Não':'(  ) Sim  (✓) Não'),'Nome da escola',v(r.escola_anterior_nome)) +
+    (r.autorizados&&r.autorizados.length?'<tr><td colspan="4" style="'+S.td+'"><span style="'+S.lbl+'">Autorizados a retirar o aluno (documento com foto)</span><table style="width:100%;border-collapse:collapse;margin-top:5px"><thead><tr style="background:#f5eeff"><th style="padding:3px 7px;border:1px solid #d0c0e0;text-align:left;font-size:9.5px">Nome</th><th style="padding:3px 7px;border:1px solid #d0c0e0;text-align:left;font-size:9.5px">Parentesco</th><th style="padding:3px 7px;border:1px solid #d0c0e0;text-align:left;font-size:9.5px">RG</th><th style="padding:3px 7px;border:1px solid #d0c0e0;text-align:left;font-size:9.5px">Telefone</th></tr></thead><tbody>'+r.autorizados.map(function(a){return '<tr><td style="padding:3px 7px;border:1px solid #d0c0e0;font-size:10.5px">'+v(a.nome)+'</td><td style="padding:3px 7px;border:1px solid #d0c0e0;font-size:10.5px">'+v(a.parentesco)+'</td><td style="padding:3px 7px;border:1px solid #d0c0e0;font-size:10.5px">'+v(a.rg)+'</td><td style="padding:3px 7px;border:1px solid #d0c0e0;font-size:10.5px">'+v(a.tel)+'</td></tr>';}).join('')+'</tbody></table></td></tr>':''));
+
+  h += tbl(secTit('Pai do Aluno') +
+    row2('Nome',v(r.pai_nome),'Data de Nascimento',v(r.pai_nascimento)) +
+    row4('Telefone',v(r.pai_tel),'Celular',v(r.pai_cel),'CPF',v(r.pai_cpf),'RG',v(r.pai_rg)) +
+    row3('Profissão',v(r.pai_profissao),'Religião',v(r.pai_religiao),'Empresa',v(r.pai_empresa)) +
+    row1('Endereço',v(r.pai_endereco)) +
+    row4('Bairro',v(r.pai_bairro),'Cidade',v(r.pai_cidade),'CEP',v(r.pai_cep),'Tel. Comercial',v(r.pai_tel_comercial)) +
+    row1('E-mail',v(r.pai_email)));
+
+  h += tbl(secTit('Mãe do Aluno') +
+    row2('Nome',v(r.mae_nome),'Data de Nascimento',v(r.mae_nascimento)) +
+    row4('Telefone',v(r.mae_tel),'Celular',v(r.mae_cel),'CPF',v(r.mae_cpf),'RG',v(r.mae_rg)) +
+    row3('Profissão',v(r.mae_profissao),'Religião',v(r.mae_religiao),'Empresa',v(r.mae_empresa)) +
+    row1('Endereço',v(r.mae_endereco)) +
+    row4('Bairro',v(r.mae_bairro),'Cidade',v(r.mae_cidade),'CEP',v(r.mae_cep),'Tel. Comercial',v(r.mae_tel_comercial)) +
+    row1('E-mail',v(r.mae_email)) +
+    row3('Situação',(r.sit_pais==='casados'?'(✓) Casados  (  ) Separados':r.sit_pais==='separados'?'(  ) Casados  (✓) Separados':'(  ) Casados  (  ) Separados'),'Cônjuge da Mãe',v(r.conjuge_mae),'Cônjuge do Pai',v(r.conjuge_pai)));
+
+  h += tbl(secTit('Responsável Financeiro') +
+    row2('Nome',v(r.fin_nome),'Parentesco',v(r.fin_parentesco)) +
+    row4('CPF',v(r.fin_cpf),'RG',v(r.fin_rg),'Data de Nascimento',v(r.fin_nascimento),'Telefone',v(r.fin_tel)) +
+    row3('Celular',v(r.fin_cel),'Empresa',v(r.fin_empresa),'Tel. Comercial',v(r.fin_tel_comercial)) +
+    row1('Endereço',v(r.fin_endereco)) +
+    row3('Bairro',v(r.fin_bairro),'Cidade',v(r.fin_cidade),'CEP',v(r.fin_cep)));
+
+  h += tbl(secTit('Comunicação e Saída') +
+    '<tr><td colspan="4" style="'+S.td+'"><span style="'+S.lbl+'">WhatsApp (apenas 1 responsável)</span>'+(r.whatsapp_para==='mae'?'<strong>(✓) Mãe</strong>':'(  ) Mãe')+'&nbsp;&nbsp;&nbsp;'+(r.whatsapp_para==='pai'?'<strong>(✓) Pai</strong>':'(  ) Pai')+'&nbsp;&nbsp;&nbsp;'+(r.whatsapp_para==='responsavel'?'<strong>(✓) Responsável</strong>':'(  ) Responsável')+'</td></tr>' +
+    row1('O aluno pode sair sozinho?',(r.saida_sozinho==='sim'?'(✓) Sim  (  ) Não':'(  ) Sim  (✓) Não')));
+
+  h += tbl(secTit('Considerações da Família') +
+    '<tr><td colspan="4" style="'+S.td+';min-height:50px">'+campo('Observações',v(r.observacoes)||'')+'</td></tr>');
+
+  h += '<div style="border:1px solid #d0c0e0;border-radius:3px;padding:8px 10px;font-family:Arial,sans-serif;font-size:10px;color:#444;margin-bottom:14px;background:#fdf9ff;page-break-inside:avoid;page-break-before:avoid">' +
+    '<strong style="color:#6a0d91">Obs:</strong> ' +
+    '• Não faz parte do currículo as comemorações de festa junina, carnaval e halloween. Serão ministradas aulas de Educação Cristã com base na Bíblia Sagrada. ' +
+    '• A escola não pode medicar o aluno.</div>';
+
+  h += '<div style="margin-top:40px;page-break-inside:avoid;page-break-before:avoid">' +
+    '<div style="width:60%;margin:0 auto;text-align:center">' +
+      '<div style="border-top:1.5px solid #333;padding-top:8px;font-family:Arial,sans-serif;font-size:11px;color:#1a1a2e;font-weight:600">Assinatura do Responsável</div>' +
+      '<div style="margin-top:4px;font-family:Arial,sans-serif;font-size:10px;color:#888">Osasco, '+dataEnvio+'</div>' +
+    '</div>' +
+  '</div>';
+
   h += '</div>';
   return h;
 }
@@ -759,6 +989,13 @@ function atualizarTicksCard(id) {
     var marcado = isPag ? r.tick_pagamento : r.tick_contrato;
     atualizarTick(el, marcado);
   });
+}
+
+function imprimirFicha() {
+  var tituloOriginal = document.title;
+  document.title = ' ';
+  window.print();
+  setTimeout(function(){ document.title = tituloOriginal; }, 1000);
 }
 </script>
 </body>
