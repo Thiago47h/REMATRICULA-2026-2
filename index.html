@@ -241,6 +241,62 @@ body { font-family: 'Nunito', sans-serif; background: var(--main-bg); color: var
   .modal-corpo { display: block !important; padding: 0 !important; background: #fff !important; }
   .sidebar, .main-content, .topbar, .page-body { display: none !important; }
 }
+
+/* LOGIN */
+.login-overlay {
+  display: flex; position: fixed; inset: 0; z-index: 999;
+  background: var(--main-bg);
+  align-items: center; justify-content: center;
+}
+.login-overlay.hidden { display: none; }
+.login-box {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 18px;
+  padding: 40px 36px;
+  width: 100%; max-width: 380px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+  text-align: center;
+}
+.login-logo { height: 56px; width: auto; margin-bottom: 20px; }
+.login-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px; color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.login-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 28px; }
+.login-field { margin-bottom: 14px; text-align: left; }
+.login-field label {
+  display: block; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .6px;
+  color: var(--text-muted); margin-bottom: 6px;
+}
+.login-field input {
+  width: 100%; padding: 11px 14px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(123,31,162,0.35);
+  border-radius: 9px; font-family: 'Nunito', sans-serif;
+  font-size: 14px; color: var(--text-primary); outline: none;
+  transition: border-color .2s;
+}
+.login-field input:focus { border-color: var(--gold); }
+.login-field input::placeholder { color: var(--text-muted); }
+.login-btn {
+  width: 100%; padding: 12px;
+  background: var(--navy); color: #fff;
+  border: none; border-radius: 9px;
+  font-family: 'Nunito', sans-serif; font-size: 14px; font-weight: 800;
+  cursor: pointer; margin-top: 6px; transition: all .18s;
+}
+.login-btn:hover { background: var(--navy-light); transform: translateY(-1px); }
+.login-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+.login-erro {
+  background: rgba(192,57,43,0.15); border: 1px solid rgba(192,57,43,0.4);
+  border-radius: 8px; padding: 10px 14px;
+  font-size: 12px; color: #ff8a80;
+  margin-top: 14px; display: none;
+}
+.login-erro.visivel { display: block; }
 </style>
 </head>
 <body>
@@ -739,7 +795,7 @@ function abrirModal(id) {
     '</div>' +
   '</div>';
 
-  h += '</div>';
+  h += '</div></div>'; // fecha page-break-before div
   // ────────────────────────────────────────────────────────────
 
   document.getElementById('modal-corpo').innerHTML = h;
@@ -953,8 +1009,8 @@ function exportarTodos() {
   a.click();
 }
 
-// Inicia
-carregar().then(function() {
+// Inicia - só roda após login (ver fazerLogin())
+function iniciarRealtime() {
   var ws_url = URL_SB.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + KEY_SB + '&vsn=1.0.0';
   var socket = new WebSocket(ws_url);
   var heartbeat;
@@ -977,7 +1033,7 @@ carregar().then(function() {
   };
   socket.onerror = function() { clearInterval(heartbeat); };
   socket.onclose = function() { clearInterval(heartbeat); };
-});
+}
 
 function atualizarTicksCard(id) {
   var r = dados.find(function(x){ return x.id === id; });
@@ -998,5 +1054,24 @@ function imprimirFicha() {
   setTimeout(function(){ document.title = tituloOriginal; }, 1000);
 }
 </script>
+
+<!-- LOGIN OVERLAY -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <img id="loginLogo" class="login-logo" src="" alt="Logo">
+    <div class="login-title">Gênesis Life</div>
+    <div class="login-sub">Painel de Rematrículas · Acesso restrito</div>
+    <div class="login-field">
+      <label>E-mail</label>
+      <input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email">
+    </div>
+    <div class="login-field">
+      <label>Senha</label>
+      <input type="password" id="loginSenha" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="login-btn" id="loginBtn" onclick="fazerLogin()">Entrar</button>
+    <div class="login-erro" id="loginErro"></div>
+  </div>
+</div>
 </body>
 </html>
